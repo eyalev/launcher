@@ -261,8 +261,8 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // Register global shortcut
-  const ret = globalShortcut.register('Alt+P', () => {
+  // Register global shortcuts
+  const altP = globalShortcut.register('Alt+P', () => {
     if (mainWindow.isVisible()) {
       mainWindow.hide();
     } else {
@@ -270,8 +270,20 @@ app.whenReady().then(() => {
     }
   });
 
-  if (!ret) {
-    console.log('Global shortcut registration failed');
+  const altR = globalShortcut.register('Alt+R', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+    }
+  });
+
+  if (!altP) {
+    console.log('Alt+P global shortcut registration failed');
+  }
+  
+  if (!altR) {
+    console.log('Alt+R global shortcut registration failed');
   }
 
   app.on('activate', () => {
