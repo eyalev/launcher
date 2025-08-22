@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   searchItems: (query) => ipcRenderer.invoke('search-items', query),
   activateWindow: (windowId) => ipcRenderer.invoke('activate-window', windowId),
   activateChromeTab: (tabId) => ipcRenderer.invoke('activate-chrome-tab', tabId),
+  refreshCache: () => ipcRenderer.invoke('refresh-cache'),
   
   // Window controls
   hideWindow: () => ipcRenderer.invoke('hide-window'),

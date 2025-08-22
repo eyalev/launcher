@@ -82,7 +82,7 @@ function App() {
     
     searchTimeoutRef.current = setTimeout(() => {
       searchItems(query)
-    }, 200)
+    }, 50)
 
     return () => {
       if (searchTimeoutRef.current) {

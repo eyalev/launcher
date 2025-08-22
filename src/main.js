@@ -9,6 +9,56 @@ let mainWindow = null;
 let windowManager = null;
 let chromeTabManager = null;
 
+// Cache for windows and tabs
+let dataCache = {
+  windows: [],
+  chromeTabs: [],
+  lastUpdated: 0,
+  isRefreshing: false
+};
+
+const CACHE_REFRESH_INTERVAL = 2000; // 2 seconds
+
+// Cache management functions
+async function refreshCache() {
+  if (dataCache.isRefreshing) {
+    return; // Already refreshing
+  }
+  
+  dataCache.isRefreshing = true;
+  
+  try {
+    console.log('Refreshing cache...');
+    
+    // Get windows and tabs in parallel
+    const [windows, chromeTabs] = await Promise.allSettled([
+      windowManager.getWindows(),
+      chromeTabManager.getTabs().catch(() => []) // Chrome tabs might not be available
+    ]);
+    
+    dataCache.windows = windows.status === 'fulfilled' ? windows.value : [];
+    dataCache.chromeTabs = chromeTabs.status === 'fulfilled' ? chromeTabs.value : [];
+    dataCache.lastUpdated = Date.now();
+    
+    console.log(`Cache refreshed: ${dataCache.windows.length} windows, ${dataCache.chromeTabs.length} Chrome tabs`);
+  } catch (error) {
+    console.error('Error refreshing cache:', error);
+  } finally {
+    dataCache.isRefreshing = false;
+  }
+}
+
+function shouldRefreshCache() {
+  return Date.now() - dataCache.lastUpdated > CACHE_REFRESH_INTERVAL;
+}
+
+async function getCachedData() {
+  if (shouldRefreshCache()) {
+    await refreshCache();
+  }
+  return dataCache;
+}
+
 // Simple file-based store for window bounds
 const configPath = path.join(app.getPath('userData'), 'launcher-config.json');
 
@@ -131,6 +181,8 @@ function createWindow() {
     mainWindow.focus();
     // Clear search when window is shown
     mainWindow.webContents.send('clear-search');
+    // Refresh cache when window is shown for fresh data
+    refreshCache();
   });
 }
 
@@ -180,9 +232,12 @@ ipcMain.handle('search-items', async (event, query) => {
 
     const results = [];
     
-    // Get windows
-    const windows = await windowManager.getWindows();
-    console.log(`Found ${windows.length} windows`);
+    // Get cached data instead of fetching fresh
+    const cached = await getCachedData();
+    const windows = cached.windows;
+    const chromeTabs = cached.chromeTabs;
+    
+    console.log(`Using cached data: ${windows.length} windows, ${chromeTabs.length} Chrome tabs`);
     
     // Filter windows based on query
     const filteredWindows = windows.filter(window => 
@@ -200,25 +255,20 @@ ipcMain.handle('search-items', async (event, query) => {
       });
     }
 
-    // Get Chrome tabs if Chrome is running
-    try {
-      const chromeTabs = await chromeTabManager.getTabs();
-      const filteredTabs = chromeTabs.filter(tab =>
-        tab.title.toLowerCase().includes(query.toLowerCase()) ||
-        tab.url.toLowerCase().includes(query.toLowerCase())
-      );
+    // Filter Chrome tabs based on query
+    const filteredTabs = chromeTabs.filter(tab =>
+      tab.title.toLowerCase().includes(query.toLowerCase()) ||
+      tab.url.toLowerCase().includes(query.toLowerCase())
+    );
 
-      for (const tab of filteredTabs) {
-        results.push({
-          id: `chrome-${tab.id}`,
-          title: tab.title,
-          subtitle: tab.url,
-          type: 'chrome_tab',
-          data: tab
-        });
-      }
-    } catch (error) {
-      console.log('Chrome tabs not available:', error.message);
+    for (const tab of filteredTabs) {
+      results.push({
+        id: `chrome-${tab.id}`,
+        title: tab.title,
+        subtitle: tab.url,
+        type: 'chrome_tab',
+        data: tab
+      });
     }
 
     console.log(`Returning ${results.length} results`);
@@ -253,10 +303,24 @@ ipcMain.handle('activate-chrome-tab', async (event, tabId) => {
   }
 });
 
-app.whenReady().then(() => {
+// Manual cache refresh handler
+ipcMain.handle('refresh-cache', async () => {
+  try {
+    await refreshCache();
+    return { success: true, timestamp: dataCache.lastUpdated };
+  } catch (error) {
+    console.error('Manual cache refresh error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+app.whenReady().then(async () => {
   // Initialize managers
   windowManager = new WindowManager();
   chromeTabManager = new ChromeTabManager();
+
+  // Initial cache load
+  await refreshCache();
 
   createWindow();
   createTray();
