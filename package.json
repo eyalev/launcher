@@ -1,0 +1,45 @@
+{
+  "name": "electron-launcher",
+  "version": "1.0.0",
+  "description": "Ubuntu launcher for windows and Chrome tabs",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development concurrently \"npm run dev:renderer\" \"wait-on http://localhost:3004 && electron .\"",
+    "dev:renderer": "cd renderer && npm run dev",
+    "build": "cd renderer && npm run build && electron-builder",
+    "dist": "npm run build"
+  },
+  "keywords": ["launcher", "ubuntu", "electron", "window-manager"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "concurrently": "^9.0.0",
+    "wait-on": "^8.0.0"
+  },
+  "dependencies": {
+    "active-win": "^8.0.0",
+    "node-window-manager": "^2.2.4",
+    "electron-store": "^10.0.0",
+    "fuse.js": "^7.0.0",
+    "chrome-remote-interface": "^0.33.0",
+    "globalthis": "^1.0.4"
+  },
+  "build": {
+    "appId": "com.launcher.electron",
+    "productName": "Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/dist/**/*"
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  }
+}
