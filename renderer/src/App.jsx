@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import SearchInput from './components/SearchInput'
 import ResultsList from './components/ResultsList'
 
@@ -9,11 +9,18 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const searchTimeoutRef = useRef(null)
+  const lastQueryRef = useRef('')
 
   const searchItems = useCallback(async (searchQuery) => {
     if (!searchQuery.trim()) {
       setResults([])
       setSelectedIndex(0)
+      lastQueryRef.current = ''
+      return
+    }
+
+    // Skip search if query hasn't really changed (just retyping same content)
+    if (lastQueryRef.current === searchQuery) {
       return
     }
 
@@ -25,8 +32,25 @@ function App() {
       const searchResults = await window.electronAPI.searchItems(searchQuery)
       console.log('Got results:', searchResults.length)
       
-      setResults(searchResults)
+      // Only update if the results are actually different or this is a new query
+      setResults(prevResults => {
+        // Compare results by checking if same items are present
+        if (prevResults.length === searchResults.length) {
+          const prevIds = prevResults.map(r => r.id).sort()
+          const newIds = searchResults.map(r => r.id).sort()
+          const sameResults = prevIds.every((id, index) => id === newIds[index])
+          
+          if (sameResults) {
+            console.log('Results unchanged, keeping previous results to prevent re-render')
+            return prevResults // Keep previous results to prevent re-render
+          }
+        }
+        
+        return searchResults
+      })
+      
       setSelectedIndex(0)
+      lastQueryRef.current = searchQuery
     } catch (err) {
       console.error('Search failed:', err)
       setError(err.message)
@@ -48,6 +72,14 @@ function App() {
       setError(err.message)
     }
   }, [])
+
+  // Memoize props to prevent unnecessary re-renders of ResultsList
+  const resultsListProps = useMemo(() => ({
+    results,
+    selectedIndex,
+    onItemClick: activateItem,
+    loading
+  }), [results, selectedIndex, activateItem, loading])
 
   const handleKeyDown = useCallback((event) => {
     switch (event.key) {
@@ -151,12 +183,7 @@ function App() {
         </div>
       )}
       
-      <ResultsList
-        results={results}
-        selectedIndex={selectedIndex}
-        onItemClick={activateItem}
-        loading={loading}
-      />
+      <ResultsList {...resultsListProps} />
     </div>
   )
 }
