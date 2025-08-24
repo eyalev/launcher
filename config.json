@@ -1,0 +1,16 @@
+{
+  "shortcuts": [
+    "Alt+P",
+    "Alt+R", 
+    "Alt+E"
+  ],
+  "window": {
+    "width": 800,
+    "height": 600,
+    "alwaysOnTop": true,
+    "skipTaskbar": false
+  },
+  "cache": {
+    "refreshInterval": 2000
+  }
+}

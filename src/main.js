@@ -17,7 +17,27 @@ let dataCache = {
   isRefreshing: false
 };
 
-const CACHE_REFRESH_INTERVAL = 2000; // 2 seconds
+// Load configuration
+let config;
+try {
+  config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf8'));
+} catch (error) {
+  console.log('Could not load config.json, using defaults:', error.message);
+  config = {
+    shortcuts: ['Alt+P', 'Alt+R', 'Alt+E'],
+    window: {
+      width: 800,
+      height: 600,
+      alwaysOnTop: true,
+      skipTaskbar: false
+    },
+    cache: {
+      refreshInterval: 2000
+    }
+  };
+}
+
+const CACHE_REFRESH_INTERVAL = config.cache.refreshInterval;
 
 // Cache management functions
 async function refreshCache() {
@@ -140,8 +160,8 @@ function createWindow() {
     y: bounds.y,
     show: true, // Show window on creation for debugging
     frame: true, // Add frame for debugging
-    alwaysOnTop: true,
-    skipTaskbar: false, // Show in taskbar for debugging
+    alwaysOnTop: config.window.alwaysOnTop,
+    skipTaskbar: config.window.skipTaskbar, 
     resizable: true, // Allow resize for debugging
     webPreferences: {
       nodeIntegration: false,
@@ -331,29 +351,30 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
-  // Register global shortcuts
-  const altP = globalShortcut.register('Alt+P', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
+  // Register global shortcuts from config
+  const registeredShortcuts = [];
+
+  config.shortcuts.forEach(shortcut => {
+    const success = globalShortcut.register(shortcut, () => {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+      }
+    });
+
+    if (success) {
+      registeredShortcuts.push(shortcut);
+      console.log(`${shortcut} shortcut registered successfully`);
     } else {
-      mainWindow.show();
+      console.log(`${shortcut} global shortcut registration failed`);
     }
   });
 
-  const altR = globalShortcut.register('Alt+R', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-    }
-  });
-
-  if (!altP) {
-    console.log('Alt+P global shortcut registration failed');
-  }
-  
-  if (!altR) {
-    console.log('Alt+R global shortcut registration failed');
+  if (registeredShortcuts.length > 0) {
+    console.log(`Active shortcuts: ${registeredShortcuts.join(', ')}`);
+  } else {
+    console.log('No shortcuts were registered successfully');
   }
 
   app.on('activate', () => {
