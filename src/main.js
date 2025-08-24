@@ -224,12 +224,8 @@ function createTray() {
 // IPC handlers
 ipcMain.handle('search-items', async (event, query) => {
   try {
-    console.log('Searching for:', query);
+    console.log('Searching for:', query || '(all items)');
     
-    if (!query.trim()) {
-      return [];
-    }
-
     const results = [];
     
     // Get cached data instead of fetching fresh
@@ -239,11 +235,27 @@ ipcMain.handle('search-items', async (event, query) => {
     
     console.log(`Using cached data: ${windows.length} windows, ${chromeTabs.length} Chrome tabs`);
     
-    // Filter windows based on query
-    const filteredWindows = windows.filter(window => 
-      window.title.toLowerCase().includes(query.toLowerCase()) ||
-      window.owner.name.toLowerCase().includes(query.toLowerCase())
-    );
+    // If empty query, return all items (for initial load)
+    let filteredWindows, filteredTabs;
+    
+    if (!query || !query.trim()) {
+      filteredWindows = windows;
+      filteredTabs = chromeTabs;
+    } else {
+      const lowerQuery = query.toLowerCase();
+      
+      // Filter windows based on query
+      filteredWindows = windows.filter(window => 
+        window.title.toLowerCase().includes(lowerQuery) ||
+        window.owner.name.toLowerCase().includes(lowerQuery)
+      );
+
+      // Filter Chrome tabs based on query
+      filteredTabs = chromeTabs.filter(tab =>
+        tab.title.toLowerCase().includes(lowerQuery) ||
+        tab.url.toLowerCase().includes(lowerQuery)
+      );
+    }
 
     for (const window of filteredWindows) {
       results.push({
@@ -254,12 +266,6 @@ ipcMain.handle('search-items', async (event, query) => {
         data: window
       });
     }
-
-    // Filter Chrome tabs based on query
-    const filteredTabs = chromeTabs.filter(tab =>
-      tab.title.toLowerCase().includes(query.toLowerCase()) ||
-      tab.url.toLowerCase().includes(query.toLowerCase())
-    );
 
     for (const tab of filteredTabs) {
       results.push({

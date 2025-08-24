@@ -8,57 +8,64 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [allItems, setAllItems] = useState([]) // Cache all available items
   const searchTimeoutRef = useRef(null)
   const lastQueryRef = useRef('')
 
-  const searchItems = useCallback(async (searchQuery) => {
-    if (!searchQuery.trim()) {
-      setResults([])
-      setSelectedIndex(0)
-      lastQueryRef.current = ''
-      return
-    }
-
-    // Skip search if query hasn't really changed (just retyping same content)
-    if (lastQueryRef.current === searchQuery) {
-      return
-    }
-
+  // Load all items once when app starts
+  const loadAllItems = useCallback(async () => {
     setLoading(true)
     setError(null)
     
     try {
-      console.log('Searching for:', searchQuery)
-      const searchResults = await window.electronAPI.searchItems(searchQuery)
-      console.log('Got results:', searchResults.length)
-      
-      // Only update if the results are actually different or this is a new query
-      setResults(prevResults => {
-        // Compare results by checking if same items are present
-        if (prevResults.length === searchResults.length) {
-          const prevIds = prevResults.map(r => r.id).sort()
-          const newIds = searchResults.map(r => r.id).sort()
-          const sameResults = prevIds.every((id, index) => id === newIds[index])
-          
-          if (sameResults) {
-            console.log('Results unchanged, keeping previous results to prevent re-render')
-            return prevResults // Keep previous results to prevent re-render
-          }
-        }
-        
-        return searchResults
-      })
-      
-      setSelectedIndex(0)
-      lastQueryRef.current = searchQuery
+      console.log('Loading all items...')
+      const allResults = await window.electronAPI.searchItems('') // Empty query to get all items
+      console.log('Loaded all items:', allResults.length)
+      setAllItems(allResults)
     } catch (err) {
-      console.error('Search failed:', err)
+      console.error('Failed to load items:', err)
       setError(err.message)
-      setResults([])
+      setAllItems([])
     } finally {
       setLoading(false)
     }
   }, [])
+
+  // Filter items locally - no network calls
+  const filterItems = useCallback((searchQuery) => {
+    if (!searchQuery.trim()) {
+      setResults([])
+      setSelectedIndex(0)
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+    const filteredResults = allItems.filter(item => 
+      item.title.toLowerCase().includes(query) ||
+      item.subtitle.toLowerCase().includes(query)
+    )
+
+    console.log(`Local filter: "${searchQuery}" -> ${filteredResults.length} results`)
+    
+    // Use a stable sort to maintain consistent order
+    filteredResults.sort((a, b) => {
+      // Prioritize exact matches in title
+      const aExact = a.title.toLowerCase() === query
+      const bExact = b.title.toLowerCase() === query
+      if (aExact && !bExact) return -1
+      if (!aExact && bExact) return 1
+      
+      // Then by title length (shorter = more relevant)
+      const lenDiff = a.title.length - b.title.length
+      if (lenDiff !== 0) return lenDiff
+      
+      // Finally alphabetical
+      return a.title.localeCompare(b.title)
+    })
+
+    setResults(filteredResults)
+    setSelectedIndex(0)
+  }, [allItems])
 
   const activateItem = useCallback(async (result) => {
     try {
@@ -106,22 +113,54 @@ function App() {
     }
   }, [results, selectedIndex, activateItem])
 
-  // Debounced search
+  // Debounced local filtering (much faster, no debounce needed)
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
     
+    // Very short debounce for local filtering
     searchTimeoutRef.current = setTimeout(() => {
-      searchItems(query)
-    }, 50)
+      filterItems(query)
+    }, 10) // Much shorter since it's just local filtering
 
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [query, searchItems])
+  }, [query, filterItems])
+
+  // Load all items when app starts
+  useEffect(() => {
+    loadAllItems()
+  }, [loadAllItems])
+
+  // Refresh data when window is shown
+  useEffect(() => {
+    const handleClearSearch = () => {
+      setQuery('')
+      setResults([])
+      setSelectedIndex(0)
+      setError(null)
+      // Refresh all items when window is shown
+      loadAllItems()
+      
+      // Re-focus input
+      setTimeout(() => {
+        const input = document.querySelector('.search-input')
+        if (input) {
+          input.focus()
+        }
+      }, 100)
+    }
+
+    window.electronAPI.onClearSearch(handleClearSearch)
+
+    return () => {
+      window.electronAPI.removeAllListeners('clear-search')
+    }
+  }, [loadAllItems])
 
   // Keyboard event listeners
   useEffect(() => {
@@ -134,33 +173,11 @@ function App() {
     setSelectedIndex(0)
   }, [results])
 
-  // Focus input on mount and handle clear search event
+  // Focus input on mount  
   useEffect(() => {
     const input = document.querySelector('.search-input')
     if (input) {
       input.focus()
-    }
-
-    // Listen for clear search event from main process
-    const handleClearSearch = () => {
-      setQuery('')
-      setResults([])
-      setSelectedIndex(0)
-      setError(null)
-      // Re-focus input
-      setTimeout(() => {
-        const input = document.querySelector('.search-input')
-        if (input) {
-          input.focus()
-        }
-      }, 100)
-    }
-
-    window.electronAPI.onClearSearch(handleClearSearch)
-
-    // Cleanup
-    return () => {
-      window.electronAPI.removeAllListeners('clear-search')
     }
   }, [])
 
