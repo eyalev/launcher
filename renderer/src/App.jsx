@@ -104,11 +104,20 @@ function App() {
           activateItem(results[selectedIndex])
         }
         break
+      case 'm':
+      case 'M':
+        // Alt+M as alternative to Enter
+        if (event.altKey) {
+          event.preventDefault()
+          if (results[selectedIndex]) {
+            activateItem(results[selectedIndex])
+          }
+        }
+        break
       case 'Escape':
         event.preventDefault()
-        setQuery('')
-        setResults([])
-        setSelectedIndex(0)
+        // Exit the entire application
+        window.electronAPI.exitApp()
         break
     }
   }, [results, selectedIndex, activateItem])

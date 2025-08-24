@@ -340,6 +340,18 @@ ipcMain.handle('refresh-cache', async () => {
   }
 });
 
+// Exit application handler
+ipcMain.handle('exit-app', async () => {
+  try {
+    console.log('Exit app requested from renderer');
+    app.quit();
+    return { success: true };
+  } catch (error) {
+    console.error('Exit app error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.whenReady().then(async () => {
   // Initialize managers
   windowManager = new WindowManager();

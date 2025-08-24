@@ -81,11 +81,11 @@ Edit `config.json` to customize your keyboard shortcuts:
 
 ## Usage
 
-1. Press your configured shortcut (default: Alt+P, Alt+R, or Alt+E)
+1. Press your configured shortcut (default: Alt+P, Alt+R, Alt+J, or Alt+E)
 2. Type to search for windows or Chrome tabs
 3. Use ↑/↓ arrow keys to navigate results
-4. Press Enter to switch to the selected item
-5. Press Escape to close the launcher
+4. Press Enter or Alt+M to switch to the selected item
+5. Press Escape to exit the launcher entirely
 
 ## Building for Production
 
