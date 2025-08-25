@@ -307,8 +307,11 @@ ipcMain.handle('search-items', async (event, query) => {
 
 ipcMain.handle('activate-window', async (event, windowId) => {
   try {
-    await windowManager.activateWindow(parseInt(windowId));
-    mainWindow.hide();
+    const success = await windowManager.activateWindow(windowId);
+    if (success) {
+      mainWindow.hide();
+    }
+    return success;
   } catch (error) {
     console.error('Window activation error:', error);
     throw error;

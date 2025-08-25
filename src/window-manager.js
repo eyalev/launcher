@@ -126,35 +126,12 @@ class WindowManager {
 
   async activateWindow(windowId) {
     try {
-      // Try node-window-manager first
-      const window = this.manager.getWindow(windowId);
-      if (window) {
-        // Restore if minimized
-        if (window.isMinimized()) {
-          window.restore();
-        }
-        
-        // Bring to front and focus
-        window.bringToTop();
-        window.show();
-        
-        // Additional focus attempt
-        setTimeout(() => {
-          try {
-            window.setForeground();
-          } catch (err) {
-            console.log('Could not set foreground:', err.message);
-          }
-        }, 100);
-        
-        return true;
-      } else {
-        // Fallback to wmctrl
-        return await this.activateWindowWithWmctrl(windowId);
-      }
-    } catch (error) {
-      console.error('Error activating window with node-window-manager, trying wmctrl:', error.message);
+      // Since we're using wmctrl for window detection, use it for activation too
+      // This ensures consistency between window IDs from getWindows() and activation
       return await this.activateWindowWithWmctrl(windowId);
+    } catch (error) {
+      console.error('Error activating window with wmctrl:', error);
+      return false;
     }
   }
 
