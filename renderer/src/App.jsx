@@ -53,6 +53,16 @@ function App() {
 
     console.log(`Local filter: "${searchQuery}" (${queryWords.length} words) -> ${filteredResults.length} results`)
     
+    // Helper function to extract domain from URL
+    const extractDomain = (url) => {
+      try {
+        const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+        return urlObj.hostname.toLowerCase()
+      } catch {
+        return ''
+      }
+    }
+
     // Use a stable sort to maintain consistent order
     filteredResults.sort((a, b) => {
       const titleLower = a.title.toLowerCase()
@@ -65,6 +75,28 @@ function App() {
       const bExactTitle = bTitleLower === query
       if (aExactTitle && !bExactTitle) return -1
       if (!aExactTitle && bExactTitle) return 1
+      
+      // For Chrome tabs (URLs), prioritize domain matches
+      if (a.type === 'chrome_tab' && b.type === 'chrome_tab') {
+        const aDomain = extractDomain(a.subtitle)
+        const bDomain = extractDomain(b.subtitle)
+        
+        // Check if query words appear in domain
+        const aWordsInDomain = queryWords.filter(word => aDomain.includes(word)).length
+        const bWordsInDomain = queryWords.filter(word => bDomain.includes(word)).length
+        
+        // Prioritize more domain matches
+        if (aWordsInDomain !== bWordsInDomain) {
+          return bWordsInDomain - aWordsInDomain
+        }
+        
+        // If same number of domain matches, prioritize exact domain matches
+        const aExactDomain = queryWords.some(word => aDomain === word || aDomain.includes(`.${word}.`) || aDomain.endsWith(`.${word}`))
+        const bExactDomain = queryWords.some(word => bDomain === word || bDomain.includes(`.${word}.`) || bDomain.endsWith(`.${word}`))
+        
+        if (aExactDomain && !bExactDomain) return -1
+        if (!aExactDomain && bExactDomain) return 1
+      }
       
       // Prioritize matches where all words are in title vs subtitle
       const aAllInTitle = queryWords.every(word => titleLower.includes(word))
