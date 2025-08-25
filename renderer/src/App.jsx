@@ -39,21 +39,38 @@ function App() {
       return
     }
 
-    const query = searchQuery.toLowerCase()
-    const filteredResults = allItems.filter(item => 
-      item.title.toLowerCase().includes(query) ||
-      item.subtitle.toLowerCase().includes(query)
-    )
+    const query = searchQuery.toLowerCase().trim()
+    const queryWords = query.split(/\s+/).filter(word => word.length > 0)
+    
+    const filteredResults = allItems.filter(item => {
+      const titleLower = item.title.toLowerCase()
+      const subtitleLower = item.subtitle.toLowerCase()
+      const combinedText = `${titleLower} ${subtitleLower}`
+      
+      // Check if ALL query words exist somewhere in the combined text
+      return queryWords.every(word => combinedText.includes(word))
+    })
 
-    console.log(`Local filter: "${searchQuery}" -> ${filteredResults.length} results`)
+    console.log(`Local filter: "${searchQuery}" (${queryWords.length} words) -> ${filteredResults.length} results`)
     
     // Use a stable sort to maintain consistent order
     filteredResults.sort((a, b) => {
+      const titleLower = a.title.toLowerCase()
+      const subtitleLower = a.subtitle.toLowerCase()
+      const bTitleLower = b.title.toLowerCase()
+      const bSubtitleLower = b.subtitle.toLowerCase()
+      
       // Prioritize exact matches in title
-      const aExact = a.title.toLowerCase() === query
-      const bExact = b.title.toLowerCase() === query
-      if (aExact && !bExact) return -1
-      if (!aExact && bExact) return 1
+      const aExactTitle = titleLower === query
+      const bExactTitle = bTitleLower === query
+      if (aExactTitle && !bExactTitle) return -1
+      if (!aExactTitle && bExactTitle) return 1
+      
+      // Prioritize matches where all words are in title vs subtitle
+      const aAllInTitle = queryWords.every(word => titleLower.includes(word))
+      const bAllInTitle = queryWords.every(word => bTitleLower.includes(word))
+      if (aAllInTitle && !bAllInTitle) return -1
+      if (!aAllInTitle && bAllInTitle) return 1
       
       // Then by title length (shorter = more relevant)
       const lenDiff = a.title.length - b.title.length
