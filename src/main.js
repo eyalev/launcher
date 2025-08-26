@@ -175,7 +175,7 @@ function createWindow() {
 
   console.log('Window created and should be visible');
 
-  // Save window bounds when moved, resized, or hidden
+  // Save window bounds when moved or resized (user actions)
   const saveBounds = () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       const bounds = mainWindow.getBounds();
@@ -186,8 +186,6 @@ function createWindow() {
 
   mainWindow.on('moved', saveBounds);
   mainWindow.on('resized', saveBounds);
-  mainWindow.on('hide', saveBounds);
-  mainWindow.on('close', saveBounds);
 
   // Load the renderer
   if (isDev) {
@@ -249,7 +247,7 @@ function createTray() {
 }
 
 // IPC handlers
-ipcMain.handle('search-items', async (event, query) => {
+ipcMain.handle('search-items', async (_, query) => {
   try {
     console.log('Searching for:', query || '(all items)');
     
@@ -312,7 +310,7 @@ ipcMain.handle('search-items', async (event, query) => {
   }
 });
 
-ipcMain.handle('activate-window', async (event, windowId) => {
+ipcMain.handle('activate-window', async (_, windowId) => {
   try {
     const success = await windowManager.activateWindow(windowId);
     if (success) {
@@ -325,7 +323,7 @@ ipcMain.handle('activate-window', async (event, windowId) => {
   }
 });
 
-ipcMain.handle('activate-chrome-tab', async (event, tabId) => {
+ipcMain.handle('activate-chrome-tab', async (_, tabId) => {
   try {
     const cleanTabId = tabId.replace('chrome-', '');
     const success = await chromeTabManager.activateTab(cleanTabId);
