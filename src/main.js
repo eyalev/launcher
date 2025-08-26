@@ -124,6 +124,7 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 function createWindow() {
   // Get saved window bounds
   const savedBounds = store.get('windowBounds');
+  console.log('Loading saved window bounds:', savedBounds);
   
   // Validate bounds are within screen area
   const validateBounds = (bounds) => {
@@ -152,6 +153,7 @@ function createWindow() {
   };
   
   const bounds = validateBounds(savedBounds);
+  console.log('Using window bounds:', bounds);
   
   mainWindow = new BrowserWindow({
     width: bounds.width,
@@ -173,14 +175,19 @@ function createWindow() {
 
   console.log('Window created and should be visible');
 
-  // Save window bounds when moved or resized
+  // Save window bounds when moved, resized, or hidden
   const saveBounds = () => {
-    const bounds = mainWindow.getBounds();
-    store.set('windowBounds', bounds);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const bounds = mainWindow.getBounds();
+      store.set('windowBounds', bounds);
+      console.log('Saved window bounds:', bounds);
+    }
   };
 
   mainWindow.on('moved', saveBounds);
   mainWindow.on('resized', saveBounds);
+  mainWindow.on('hide', saveBounds);
+  mainWindow.on('close', saveBounds);
 
   // Load the renderer
   if (isDev) {
@@ -195,9 +202,9 @@ function createWindow() {
   //   mainWindow.hide();
   // });
 
-  // Center window when shown
+  // Handle window show event
   mainWindow.on('show', () => {
-    mainWindow.center();
+    // Don't center - preserve saved position
     mainWindow.focus();
     // Clear search when window is shown
     mainWindow.webContents.send('clear-search');
