@@ -11,7 +11,7 @@
     "dist": "npm run build"
   },
   "keywords": ["launcher", "ubuntu", "electron", "window-manager"],
-  "author": "",
+  "author": "Eyal Levin <eyalev@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "electron": "^32.0.0",
@@ -28,18 +28,57 @@
     "globalthis": "^1.0.4"
   },
   "build": {
-    "appId": "com.launcher.electron",
+    "appId": "com.eyalev.launcher",
     "productName": "Launcher",
     "directories": {
       "output": "dist"
     },
     "files": [
       "src/**/*",
-      "renderer/dist/**/*"
+      "renderer/dist/**/*",
+      "config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/"
+      }
     ],
     "linux": {
-      "target": "AppImage",
-      "category": "Utility"
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "tar.gz",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Utility",
+      "maintainer": "Eyal Levin <eyalev@gmail.com>",
+      "vendor": "eyalev",
+      "synopsis": "Ubuntu launcher for windows and Chrome tabs",
+      "description": "A fast, modern launcher for Ubuntu that helps you quickly switch between open windows and Chrome tabs using keyboard shortcuts.",
+      "desktop": {
+        "Name": "Launcher",
+        "Comment": "Quick launcher for windows and Chrome tabs",
+        "Keywords": "launcher;window;switcher;chrome;tabs;",
+        "StartupNotify": true,
+        "StartupWMClass": "Launcher"
+      }
+    },
+    "deb": {
+      "depends": ["wmctrl"],
+      "recommends": ["google-chrome-stable | chromium-browser"],
+      "priority": "optional"
+    },
+    "appImage": {
+      "license": "LICENSE"
     }
   }
 }

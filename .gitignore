@@ -1,1 +1,11 @@
 node_modules
+dist/
+build/
+*.AppImage
+*.deb
+*.tar.gz
+*.snap
+*.rpm
+renderer/dist/
+renderer/build/
+.cache/
