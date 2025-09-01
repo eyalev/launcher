@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, shell, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, shell, nativeImage, screen, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const WindowManager = require('./window-manager');
@@ -35,6 +35,15 @@ try {
       refreshInterval: 2000
     }
   };
+}
+
+// Load package.json for version info
+let packageInfo;
+try {
+  packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+} catch (error) {
+  console.log('Could not load package.json:', error.message);
+  packageInfo = { version: '1.0.0', name: 'electron-launcher' };
 }
 
 const CACHE_REFRESH_INTERVAL = config.cache.refreshInterval;
@@ -212,22 +221,51 @@ function createWindow() {
 }
 
 function createTray() {
-  // Create a simple tray icon (you can replace with a proper icon file)
-  const iconPath = path.join(__dirname, '../assets/tray-icon.png');
+  // Create a tray icon with fallback paths
+  const iconPaths = [
+    path.join(__dirname, '../assets/tray-icon.png'),           // Development path
+    path.join(process.resourcesPath, 'assets/tray-icon.png'),  // Production path
+    path.join(__dirname, '../../assets/tray-icon.png'),       // Alternative path
+  ];
   
-  // For now, create without icon if file doesn't exist
-  try {
-    tray = new Tray(iconPath);
-  } catch (error) {
-    console.log('Could not load tray icon, using empty icon:', error.message);
-    tray = new Tray(nativeImage.createEmpty());
+  let trayIcon = null;
+  for (const iconPath of iconPaths) {
+    try {
+      if (fs.existsSync(iconPath)) {
+        trayIcon = nativeImage.createFromPath(iconPath);
+        console.log('Using tray icon from:', iconPath);
+        break;
+      }
+    } catch (error) {
+      console.log('Could not load icon from:', iconPath, error.message);
+    }
   }
+  
+  if (!trayIcon || trayIcon.isEmpty()) {
+    console.log('No tray icon found, creating simple icon');
+    trayIcon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYAgMAAACdGdVrAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAJUExURQAAAEqQ4v///4BuSHsAAAABdFJOUwBA5thmAAAAAWJLR0QCZgt8ZAAAAAd0SU1FB+kJAQsqOXQITj8AAAAVSURBVAjXY2AgHrC6ujpgUBTKEQsAem4HSLr+p5cAAAAASUVORK5CYII=');
+  }
+  
+  tray = new Tray(trayIcon);
 
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Show Launcher',
       click: () => {
         mainWindow.show();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'About',
+      click: () => {
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'About Launcher',
+          message: `${packageInfo.name}`,
+          detail: `Version: ${packageInfo.version}\n\nA fast, modern launcher for Ubuntu that helps you quickly switch between open windows and Chrome tabs using keyboard shortcuts.`,
+          buttons: ['OK']
+        });
       }
     },
     {
