@@ -1,6 +1,6 @@
 {
   "name": "electron-launcher",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Ubuntu launcher for windows and Chrome tabs",
   "main": "src/main.js",
   "scripts": {
